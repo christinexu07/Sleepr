@@ -2,11 +2,18 @@ package com.mistershorr.loginandregistration
 
 import android.app.Activity
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import com.backendless.Backendless
+import com.backendless.BackendlessUser
+import com.backendless.async.callback.AsyncCallback
+import com.backendless.exceptions.BackendlessFault
 import com.mistershorr.loginandregistration.databinding.ActivityLoginBinding
+
 
 class LoginActivity : AppCompatActivity() {
 
@@ -15,6 +22,7 @@ class LoginActivity : AppCompatActivity() {
         // and have the EXTRA_BLAH format for naming the key
         val EXTRA_USERNAME = "username"
         val EXTRA_PASSWORD = "password"
+        val TAG = "bloop"
     }
 
     val startRegistrationForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -32,6 +40,9 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        //register with backendless
+        Backendless.initApp(this, Constants.APP_ID, Constants.API_KEY);
 
         // launch the Registration Activity
         binding.textViewLoginSignup.setOnClickListener {
@@ -51,5 +62,29 @@ class LoginActivity : AppCompatActivity() {
             // register for result contract above
             startRegistrationForResult.launch(registrationIntent)
         }
+
+         binding.buttonLoginLogin.setOnClickListener{
+             Backendless.UserService.login(
+                 binding.editTextLoginUsername.text.toString(),
+                 binding.editTextLoginPassword.text.toString(),
+                 object : AsyncCallback<BackendlessUser?> {
+                     override fun handleResponse(user: BackendlessUser?) {
+                         // user has been logged in
+                         Log.d(TAG, "handleResponse: ${user?.getProperty("username")} has logged in.")
+                         // this is where would move to the next activity (SleepListActivity probably)
+                         val dummyRetrievalIntent = Intent(this@LoginActivity,
+                             SleepListActivity::class.java)
+                         startActivity(dummyRetrievalIntent)
+                     }
+
+                     override fun handleFault(fault: BackendlessFault) {
+                         // login failed, to get the error code call fault.getCode()
+                         Toast.makeText(this@LoginActivity, "bad registration info", Toast.LENGTH_SHORT).show()
+                         Log.d(TAG, "handleFault: ${fault.toString()}")
+                     }
+                 })
+
+
+         }
     }
 }
