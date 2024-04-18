@@ -1,6 +1,8 @@
 package com.mistershorr.loginandregistration
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -27,6 +29,7 @@ class SleepDetailActivity : AppCompatActivity() {
     companion object {
         val TAG = "SleepDetailActivity"
         val EXTRA_SLEEP: String? = null
+        var SLEEP_LIST = "sleep list"
     }
 
     private lateinit var binding: ActivitySleepDetailBinding
@@ -38,6 +41,8 @@ class SleepDetailActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySleepDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        //setting values
         if(intent.getParcelableExtra<Sleep>(EXTRA_SLEEP)!= null){
             setExistingValues()
         }
@@ -103,20 +108,72 @@ class SleepDetailActivity : AppCompatActivity() {
 
     }
 
+
+
+
+
+
+    fun millisConversion(millisTime:String, dateTime:String):Long{
+        var newTime = dateTime + ' ' + millisTime
+        var timeConverter = DateTimeFormatter.ofPattern("EEEE MMM dd, yyyy HH:mm a")
+        var date = LocalDateTime.parse(newTime, timeConverter)
+        val zonedDate = ZonedDateTime.of(date, ZoneId.systemDefault())
+        var millis= zonedDate.toInstant().toEpochMilli()
+        if(dateTime.substring(6).equals("AM")){
+            millis+=86400000
+        }
+        return millis
+    }
+
+    fun dateConversion(dateTime:String):Long{
+        var dateTime2 = dateTime + " 00:00 AM"
+        var timeConverter = DateTimeFormatter.ofPattern("EEEE MMM dd, yyyy HH:mm a")
+        var date = LocalDateTime.parse(dateTime2,timeConverter)
+        val zonedDate = ZonedDateTime.of(date, ZoneId.systemDefault())
+        var millis= zonedDate.toInstant().toEpochMilli()
+        Log.d(TAG, "dateConversion: $millis")
+        return millis
+    }
+    fun saveSleep(){
+        var wakeString = binding.buttonSleepDetailWakeTime.text.toString()
+        var bedString = binding.buttonSleepDetailBedTime.text.toString()
+        var dateString = binding.buttonSleepDetailDate.text.toString()
+        var wakeMillis = millisConversion(wakeString,dateString)
+        var bedMillis = millisConversion(bedString,dateString)
+        var dateMillis = dateConversion(dateString)
+
+        val sleep = Sleep(
+            wakeMillis,
+            bedMillis,
+            dateMillis,
+            binding.ratingBarSleepDetailQuality.rating.toInt(),
+            binding.editTextTextMultiLineSleepDetailNotes.text.toString())
+        Log.d(TAG, "saveSleep: ${sleep}")
+        sleep.ownerId = Backendless.UserService.CurrentUser().userId
+        Backendless.Data.of(Sleep::class.java).save(sleep, object : AsyncCallback<Sleep?> {
+            override fun handleResponse(response: Sleep?) {
+                finish()
+            }
+            override fun handleFault(fault: BackendlessFault) {
+                Log.d(SleepDetailActivity.TAG, "handleFault: ${fault.message}")
+            }
+        })
+    }
+
     fun updateSleep(){
         var sleep = intent.getParcelableExtra<Sleep>(EXTRA_SLEEP)
         var wakeString = binding.buttonSleepDetailWakeTime.text.toString()
         var bedString = binding.buttonSleepDetailBedTime.text.toString()
         var dateString = binding.buttonSleepDetailDate.text.toString()
-        var wakeMillis = wakeMillisConversion(wakeString,dateString)
-        var bedMillis = bedMillisConversion(bedString,dateString)
+        var wakeMillis = millisConversion(wakeString,dateString)
+        var bedMillis = millisConversion(bedString,dateString)
         var dateMillis = dateConversion(dateString)
         Backendless.Data.of(Sleep::class.java).save(sleep, object : AsyncCallback<Sleep> {
             override fun handleResponse(savedSleep: Sleep) {
                 savedSleep.wakeMillis = wakeMillis
                 savedSleep.bedMillis = bedMillis
                 savedSleep.sleepDateMillis=dateMillis
-                savedSleep.quality=binding.ratingBarSleepDetailQuality.numStars
+                savedSleep.quality=binding.ratingBarSleepDetailQuality.rating.toInt()
                 savedSleep.notes=binding.editTextTextMultiLineSleepDetailNotes.text.toString()
                 Backendless.Data.of(Sleep::class.java)
                     .save(savedSleep, object : AsyncCallback<Sleep?> {
@@ -136,73 +193,6 @@ class SleepDetailActivity : AppCompatActivity() {
         })
     }
 
-
-
-    fun wakeMillisConversion(wakeTime:String, dateTime:String):Long{
-        var newTime = dateTime + ' ' + wakeTime
-        var timeConverter = DateTimeFormatter.ofPattern("EEEE MMM dd, yyyy HH:mm a")
-        var date = LocalDateTime.parse(newTime, timeConverter)
-        val zonedDate = ZonedDateTime.of(date, ZoneId.systemDefault())
-        var millis= zonedDate.toInstant().toEpochMilli()
-        if(dateTime.substring(6).equals("AM")){
-            millis+=86400000
-        }
-        Log.d(TAG, "wakeMillisConversion: $millis")
-        return millis
-    }
-
-    fun bedMillisConversion(bedTime:String, dateTime:String):Long{
-        var newTime = dateTime + ' ' + bedTime
-        var timeConverter = DateTimeFormatter.ofPattern("EEEE MMM dd, yyyy HH:mm a")
-        var date = LocalDateTime.parse(newTime, timeConverter)
-        val zonedDate = ZonedDateTime.of(date, ZoneId.systemDefault())
-        var millis= zonedDate.toInstant().toEpochMilli()
-        if(dateTime.substring(6).equals("AM")){
-            millis+=86400000
-        }
-        Log.d(TAG, "bedMillisConversion: $millis")
-        return millis
-    }
-
-    fun dateConversion(dateTime:String):Long{
-        var dateTime2 = dateTime + " 00:00 AM"
-        var timeConverter = DateTimeFormatter.ofPattern("EEEE MMM dd, yyyy HH:mm a")
-        var date = LocalDateTime.parse(dateTime2,timeConverter)
-        val zonedDate = ZonedDateTime.of(date, ZoneId.systemDefault())
-        var millis= zonedDate.toInstant().toEpochMilli()
-        Log.d(TAG, "dateConversion: $millis")
-        return millis
-    }
-    @SuppressLint("SuspiciousIndentation")
-    fun saveSleep(){
-        Log.d(TAG, "saveSleep: tryna save")
-        var wakeString = binding.buttonSleepDetailWakeTime.text.toString()
-        var bedString = binding.buttonSleepDetailBedTime.text.toString()
-        var dateString = binding.buttonSleepDetailDate.text.toString()
-        var wakeMillis = wakeMillisConversion(wakeString,dateString)
-        var bedMillis = bedMillisConversion(bedString,dateString)
-        var dateMillis = dateConversion(dateString)
-
-        Log.d(TAG, "saveSleep: successful conversion ")
-
-        val sleep = Sleep(
-            wakeMillis,
-            bedMillis,
-            dateMillis,
-            binding.ratingBarSleepDetailQuality.numStars,
-            binding.editTextTextMultiLineSleepDetailNotes.text.toString())
-        Log.d(TAG, "saveSleep: ${sleep}")
-
-        sleep.ownerId = Backendless.UserService.CurrentUser().userId
-        Backendless.Data.of(Sleep::class.java).save(sleep, object : AsyncCallback<Sleep?> { override fun handleResponse(response: Sleep?) {
-                Log.d(SleepDetailActivity.TAG, "handleResponse: successful save")
-                finish()
-            }
-            override fun handleFault(fault: BackendlessFault) {
-                Log.d(SleepDetailActivity.TAG, "handleFault: ${fault.message}")
-            }
-        })
-    }
     fun setExistingValues(){
         Log.d(TAG, "setExistingValues: ")
         val sleep:Sleep? = intent.getParcelableExtra<Sleep>(EXTRA_SLEEP)

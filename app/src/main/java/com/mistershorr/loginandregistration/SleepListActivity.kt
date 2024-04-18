@@ -1,8 +1,10 @@
 package com.mistershorr.loginandregistration
 
+import android.app.Instrumentation
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.backendless.Backendless
@@ -18,12 +20,13 @@ class SleepListActivity : AppCompatActivity() {
     companion object{
         var TAG = "bloop"
 
+
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySleepListBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        AdvancedObjectRetrieval()
+        setRecyclerView1()
         Log.d(TAG, "onCreate: successful start of sleeplist")
         binding.floatingActionButtonSleepListNew.setOnClickListener(){
             val intent = Intent(this,
@@ -33,8 +36,12 @@ class SleepListActivity : AppCompatActivity() {
     }
 
 
-    fun AdvancedObjectRetrieval(){
-        Log.d(TAG, "AdvancedObjectRetrieval: ")
+    override fun onResume(){
+        super.onResume()
+        setRecyclerView1()
+    }
+
+    fun setRecyclerView1(){
         val userId = Backendless.UserService.CurrentUser().userId
         val whereClause = "ownerId = '$userId'"
         val queryBuilder = DataQueryBuilder.create()
@@ -45,18 +52,16 @@ class SleepListActivity : AppCompatActivity() {
                     // each instance represents an object stored on the server.
                     if (foundSleeps !=null){
                         Log.d(TAG, "handleResponse!!!: ${foundSleeps!!}")
-                        setRecyclerView(foundSleeps!!)
+                        setRecyclerView2(foundSleeps!!)
                     }
                 }
                 override fun handleFault(fault: BackendlessFault) {
                     Log.d(TAG, "handleFault: ${fault.code}")
                 }
             })
-
-
     }
 
-    fun setRecyclerView(sleepList:MutableList<Sleep?>) {
+    fun setRecyclerView2(sleepList:MutableList<Sleep?>) {
         var adapter = SleepAdapter(sleepList)
         binding.recyclerView.adapter = adapter
         binding.recyclerView.layoutManager = LinearLayoutManager(this)

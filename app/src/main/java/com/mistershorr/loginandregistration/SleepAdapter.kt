@@ -1,5 +1,6 @@
 package com.mistershorr.loginandregistration
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.util.Log
@@ -9,6 +10,8 @@ import android.view.ViewGroup
 import android.widget.PopupMenu
 import android.widget.RatingBar
 import android.widget.TextView
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
@@ -23,8 +26,14 @@ import java.time.format.DateTimeFormatter
 class SleepAdapter(var dataSet: MutableList<Sleep?>) : RecyclerView.Adapter<SleepAdapter.ViewHolder>() {
 
     companion object {
+
         val TAG = "SleepAdapter"
+        val ADDED_SLEEP = "added sleep"
+
     }
+
+
+
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val textViewDate : TextView
@@ -52,22 +61,15 @@ class SleepAdapter(var dataSet: MutableList<Sleep?>) : RecyclerView.Adapter<Slee
         val sleep = dataSet[position]
         val context = holder.layout.context
 
+
         val formatter = DateTimeFormatter.ofPattern("yyy-MM-dd")
         val sleepDate = LocalDateTime.ofEpochSecond(
             sleep!!.sleepDateMillis/1000, 0,
             ZoneId.systemDefault().rules.getOffset(Instant.now()))
         holder.textViewDate.text = formatter.format(sleepDate)
 
-        // calculate the difference in time from bed to wake and convert to hours & minutes
-        // use String.format() to display it in HH:mm format in the duration textview
-        // hint: you need leading zeroes and a width of 2
-        var diffMillis:Long = (sleep.wakeMillis - sleep.bedMillis)
-        var hours = diffMillis/3600000
-        var minutes = diffMillis%3600000/60000
-        var strHours = String.format("%02d",hours)
-        var strMin = String.format("%02d", minutes)
-        var time = strHours+":"+strMin
-        holder.textViewDuration.text = time
+
+        holder.textViewDuration.text = findDuration(sleep)
 
 
         // sets the actual hours slept textview
@@ -78,10 +80,12 @@ class SleepAdapter(var dataSet: MutableList<Sleep?>) : RecyclerView.Adapter<Slee
         val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
         holder.textViewHours.text = "${timeFormatter.format(bedTime)} - ${timeFormatter.format(wakeTime)}"
 
+
         if (sleep != null) {
-            holder.ratingBarQuality.rating = sleep.quality.toFloat()/2
+            holder.ratingBarQuality.rating = sleep.quality.toFloat()
         }
 
+        //DELETE function
         holder.layout.isLongClickable = true
         holder.layout.setOnLongClickListener {
             // the holder.textViewBorrower is the textView that the PopMenu will be anchored to
@@ -100,12 +104,25 @@ class SleepAdapter(var dataSet: MutableList<Sleep?>) : RecyclerView.Adapter<Slee
             true
         }
 
+
+        //UPDATE function
         holder.layout.setOnClickListener {
             val intent = Intent(context, SleepDetailActivity::class.java).apply {
                 putExtra(SleepDetailActivity.EXTRA_SLEEP, sleep)
             }
             context.startActivity(intent)
+
         }
+    }
+
+    fun findDuration(sleep:Sleep):String{
+        var diffMillis:Long = (sleep.wakeMillis - sleep.bedMillis)
+        var hours = diffMillis/3600000
+        var minutes = diffMillis%3600000/60000
+        var strHours = String.format("%02d",hours)
+        var strMin = String.format("%02d", minutes)
+        var time = strHours+":"+strMin
+        return time
     }
 
     override fun getItemCount(): Int {
@@ -133,9 +150,12 @@ class SleepAdapter(var dataSet: MutableList<Sleep?>) : RecyclerView.Adapter<Slee
                     });
             }
 
-    public fun newItem(sleep:Sleep){
-
+    public fun addItem(sleep:Sleep){
+        dataSet.add(sleep)
+        notifyDataSetChanged()
     }
+
+
     }
 
 
